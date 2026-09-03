@@ -12,17 +12,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # sdk-dist isn't installed by setup-sdk (that only provisions a
-      # ready-to-use $PS2DEV, not sdk-dist's own git history) - it's
-      # checked out purely as a source for share/ps2dev.cmake, the CMake
+      # Checked out purely as a source for ps2dev.cmake, the CMake
       # toolchain file real upstream CMake projects (this one included)
-      # build against. Small checkout: everything else under sdk-dist is
-      # gitignored build output, not real repo content.
-      - name: Checkout sdk-dist (source, for share/ps2dev.cmake)
+      # build against - not installed by setup-sdk itself. `path: ../x`
+      # is rejected by this runner's own action sandboxing ("Repository
+      # path ... is not under ... hostexecutor" - a real, separately
+      # confirmed bug, not specific to this repo), so this nests inside
+      # the checkout instead of landing as a true sibling - fine here,
+      # since every reference to it below is fully contained within
+      # this same workflow file (unlike sdk-world's own sdk-core
+      # checkout, whose hardcoded ps2.yaml-level ../../sdk-core paths
+      # need a true sibling and get theirs via a Move-Item step).
+      - name: Checkout cmake-toolchain (source, for ps2dev.cmake)
         uses: actions/checkout@v4
         with:
-          repository: ps2/sdk-dist
-          path: ../sdk-dist
+          repository: ps2/cmake-toolchain
+          path: cmake-toolchain
 
       # C:\ps2dev-consumer, not C:\ps2dev - sdk-core/sdk-world's own CI
       # builds the SDK from source into C:\ps2dev on this same
@@ -41,8 +46,9 @@ jobs:
       - name: Configure with CMake
         shell: pwsh
         run: |
+          $env:PS2DEV = "C:\ps2dev-consumer"
           cmake -S . -B build -G Ninja `
-            -DCMAKE_TOOLCHAIN_FILE=../sdk-dist/share/ps2dev.cmake `
+            -DCMAKE_TOOLCHAIN_FILE=cmake-toolchain/ps2dev.cmake `
             -DCMAKE_INSTALL_PREFIX=C:\ps2dev-consumer\packages\world\ps2stuff
 
       - name: Build
