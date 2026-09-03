@@ -12,17 +12,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # `path: ../x` is rejected by this runner's own action sandboxing
-      # ("Repository path ... is not under ... hostexecutor") - nests
-      # inside the checkout instead; every reference below is fully
-      # contained within this workflow file, so no true sibling is
-      # needed here (see build.yml's own comment on this same step).
-      - name: Checkout cmake-toolchain (source, for ps2dev.cmake)
-        uses: actions/checkout@v4
-        with:
-          repository: ps2/cmake-toolchain
-          path: cmake-toolchain
-
       - name: Clean C:\ps2dev-consumer
         shell: pwsh
         run: Remove-Item -Recurse -Force C:\ps2dev-consumer -ErrorAction SilentlyContinue
@@ -31,12 +20,13 @@ jobs:
         with:
           ps2dev: C:\ps2dev-consumer
 
+      # ps2build update installs ps2dev.cmake itself - see build.yml's
+      # own comment on this same step.
       - name: Configure with CMake
         shell: pwsh
         run: |
           $env:PS2DEV = "C:\ps2dev-consumer"
           cmake -S . -B build -G Ninja `
-            -DCMAKE_TOOLCHAIN_FILE=cmake-toolchain/ps2dev.cmake `
             -DCMAKE_INSTALL_PREFIX=C:\ps2dev-consumer\packages\world\ps2stuff
 
       - name: Build

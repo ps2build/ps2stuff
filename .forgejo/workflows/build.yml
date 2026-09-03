@@ -12,23 +12,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Checked out purely as a source for ps2dev.cmake, the CMake
-      # toolchain file real upstream CMake projects (this one included)
-      # build against - not installed by setup-sdk itself. `path: ../x`
-      # is rejected by this runner's own action sandboxing ("Repository
-      # path ... is not under ... hostexecutor" - a real, separately
-      # confirmed bug, not specific to this repo), so this nests inside
-      # the checkout instead of landing as a true sibling - fine here,
-      # since every reference to it below is fully contained within
-      # this same workflow file (unlike sdk-world's own sdk-core
-      # checkout, whose hardcoded ps2.yaml-level ../../sdk-core paths
-      # need a true sibling and get theirs via a Move-Item step).
-      - name: Checkout cmake-toolchain (source, for ps2dev.cmake)
-        uses: actions/checkout@v4
-        with:
-          repository: ps2/cmake-toolchain
-          path: cmake-toolchain
-
       # C:\ps2dev-consumer, not C:\ps2dev - sdk-core/sdk-world's own CI
       # builds the SDK from source into C:\ps2dev on this same
       # self-hosted runner; a real external CMake consumer (this repo)
@@ -43,12 +26,17 @@ jobs:
         with:
           ps2dev: C:\ps2dev-consumer
 
+      # ps2build update installs ps2dev.cmake itself, into
+      # C:\ps2dev-consumer\share\ - ps2stuff's own CMakeLists.txt
+      # already defaults CMAKE_TOOLCHAIN_FILE to
+      # $ENV{PS2DEV}/share/ps2dev.cmake when nothing else is passed, so
+      # setting PS2DEV is all this needs (no separate checkout, no
+      # explicit -DCMAKE_TOOLCHAIN_FILE=).
       - name: Configure with CMake
         shell: pwsh
         run: |
           $env:PS2DEV = "C:\ps2dev-consumer"
           cmake -S . -B build -G Ninja `
-            -DCMAKE_TOOLCHAIN_FILE=cmake-toolchain/ps2dev.cmake `
             -DCMAKE_INSTALL_PREFIX=C:\ps2dev-consumer\packages\world\ps2stuff
 
       - name: Build
