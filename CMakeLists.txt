@@ -100,6 +100,15 @@ install(
     DESTINATION lib
 )
 
+# package.yaml - so ps2build's own package tooling (list_packages,
+# describe_package, resolve_libs) can see this package like any other
+# installed under packages/<tier>/<name>, even though it's built by
+# CMake rather than "ps2build install".
+install(
+    FILES ${CMAKE_SOURCE_DIR}/package.yaml
+    DESTINATION .
+)
+
 install(
     DIRECTORY ${CMAKE_SOURCE_DIR}/include/ps2s
     DESTINATION include
