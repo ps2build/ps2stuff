@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: windows
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout sdk-dist (source, for share/ps2dev.cmake)
+        uses: actions/checkout@v4
+        with:
+          repository: ps2/sdk-dist
+          path: ../sdk-dist
+
+      - name: Clean C:\ps2dev-consumer
+        shell: pwsh
+        run: Remove-Item -Recurse -Force C:\ps2dev-consumer -ErrorAction SilentlyContinue
+
+      - uses: https://git.techwritescode.dev/ps2/setup-sdk@master
+        with:
+          ps2dev: C:\ps2dev-consumer
+
+      - name: Configure with CMake
+        shell: pwsh
+        run: |
+          cmake -S . -B build -G Ninja `
+            -DCMAKE_TOOLCHAIN_FILE=../sdk-dist/share/ps2dev.cmake `
+            -DCMAKE_INSTALL_PREFIX=C:\ps2dev-consumer\packages\world\ps2stuff
+
+      - name: Build
+        shell: pwsh
+        run: cmake --build build
+
+      - name: Install
+        shell: pwsh
+        run: cmake --install build
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}"
+          Compress-Archive -Path C:\ps2dev-consumer\packages\world\ps2stuff\* -DestinationPath "ps2stuff-$version-windows-x64.zip"
+
+      # Assumes fj is installed and already authenticated on the runner.
+      - name: Publish release
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}"
+          fj release create $version -t $version -a "ps2stuff-$version-windows-x64.zip" -r ps2/ps2stuff
+
+      - name: Clean up
+        if: always()
+        shell: pwsh
+        run: |
+          Remove-Item -Force "ps2stuff-*-windows-x64.zip" -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force build -ErrorAction SilentlyContinue

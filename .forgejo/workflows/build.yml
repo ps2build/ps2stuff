@@ -1,0 +1,65 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    # Same real Windows-capable Forgejo runner sdk-core/sdk-world build on
+    # - the EE cross-compiler is a native Windows .exe (built via MSYS2).
+    runs-on: windows
+    steps:
+      - uses: actions/checkout@v4
+
+      # sdk-dist isn't installed by setup-sdk (that only provisions a
+      # ready-to-use $PS2DEV, not sdk-dist's own git history) - it's
+      # checked out purely as a source for share/ps2dev.cmake, the CMake
+      # toolchain file real upstream CMake projects (this one included)
+      # build against. Small checkout: everything else under sdk-dist is
+      # gitignored build output, not real repo content.
+      - name: Checkout sdk-dist (source, for share/ps2dev.cmake)
+        uses: actions/checkout@v4
+        with:
+          repository: ps2/sdk-dist
+          path: ../sdk-dist
+
+      # C:\ps2dev-consumer, not C:\ps2dev - sdk-core/sdk-world's own CI
+      # builds the SDK from source into C:\ps2dev on this same
+      # self-hosted runner; a real external CMake consumer (this repo)
+      # needs its own separate, already-built SDK install so concurrent
+      # runs of both kinds of workflow can never step on each other's
+      # in-progress C:\ps2dev.
+      - name: Clean C:\ps2dev-consumer
+        shell: pwsh
+        run: Remove-Item -Recurse -Force C:\ps2dev-consumer -ErrorAction SilentlyContinue
+
+      - uses: https://git.techwritescode.dev/ps2/setup-sdk@master
+        with:
+          ps2dev: C:\ps2dev-consumer
+
+      - name: Configure with CMake
+        shell: pwsh
+        run: |
+          cmake -S . -B build -G Ninja `
+            -DCMAKE_TOOLCHAIN_FILE=../sdk-dist/share/ps2dev.cmake `
+            -DCMAKE_INSTALL_PREFIX=C:\ps2dev-consumer\packages\world\ps2stuff
+
+      - name: Build
+        shell: pwsh
+        run: cmake --build build
+
+      - name: Install
+        shell: pwsh
+        run: cmake --install build
+
+      - name: Get short SHA
+        id: slug
+        shell: pwsh
+        run: "'sha8=' + $env:GITHUB_SHA.Substring(0,8) >> $env:GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: libps2stuff-${{ steps.slug.outputs.sha8 }}
+          path: build/*.a
