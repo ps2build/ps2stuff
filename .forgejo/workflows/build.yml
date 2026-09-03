@@ -52,8 +52,13 @@ jobs:
         shell: pwsh
         run: "'sha8=' + $env:GITHUB_SHA.Substring(0,8) >> $env:GITHUB_OUTPUT"
 
+      # The installed package directory (include/, lib/, package.yaml),
+      # not the raw build/*.a - a bare .a with no headers or
+      # package.yaml isn't something anyone could actually drop into a
+      # $PS2DEV/packages/world/ and use; cmake --install above already
+      # produced the real, complete package shape.
       - uses: actions/upload-artifact@v3
         if: success()
         with:
-          name: libps2stuff-${{ steps.slug.outputs.sha8 }}
-          path: build/*.a
+          name: ps2stuff-${{ steps.slug.outputs.sha8 }}
+          path: C:\ps2dev-consumer\packages\world\ps2stuff
