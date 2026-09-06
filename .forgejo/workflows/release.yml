@@ -37,22 +37,26 @@ jobs:
         shell: pwsh
         run: cmake --install build
 
+      # Unsuffixed, matching sdk-core/sdk-world/audsrv - this is
+      # cross-compiled PS2 MIPS content, not a host binary, so a
+      # "windows"/"linux" label would be misleading regardless of
+      # which runner built it.
       - name: Package
         shell: pwsh
         run: |
           $version = "${{ github.ref_name }}"
-          Compress-Archive -Path C:\ps2dev-consumer\packages\world\ps2stuff\* -DestinationPath "ps2stuff-$version-windows-x64.zip"
+          Compress-Archive -Path C:\ps2dev-consumer\packages\world\ps2stuff\* -DestinationPath "ps2stuff-$version.zip"
 
       # Assumes fj is installed and already authenticated on the runner.
       - name: Publish release
         shell: pwsh
         run: |
           $version = "${{ github.ref_name }}"
-          fj release create $version -t $version -a "ps2stuff-$version-windows-x64.zip" -r ps2/ps2stuff
+          fj release create $version -t $version -a "ps2stuff-$version.zip" -r ps2/ps2stuff
 
       - name: Clean up
         if: always()
         shell: pwsh
         run: |
-          Remove-Item -Force "ps2stuff-*-windows-x64.zip" -ErrorAction SilentlyContinue
+          Remove-Item -Force "ps2stuff-*-windows-amd64.zip" -ErrorAction SilentlyContinue
           Remove-Item -Recurse -Force build -ErrorAction SilentlyContinue
