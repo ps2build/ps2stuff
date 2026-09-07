@@ -27,9 +27,9 @@ jobs:
           ps2dev: C:\ps2dev-consumer
 
       # ps2build update installs ps2dev.cmake itself, into
-      # C:\ps2dev-consumer\share\ - ps2stuff's own CMakeLists.txt
+      # C:\ps2dev-consumer\cmake\ - ps2stuff's own CMakeLists.txt
       # already defaults CMAKE_TOOLCHAIN_FILE to
-      # $ENV{PS2DEV}/share/ps2dev.cmake when nothing else is passed, so
+      # $ENV{PS2DEV}/cmake/ps2dev.cmake when nothing else is passed, so
       # setting PS2DEV is all this needs (no separate checkout, no
       # explicit -DCMAKE_TOOLCHAIN_FILE=).
       - name: Configure with CMake

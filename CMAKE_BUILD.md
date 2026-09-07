@@ -71,7 +71,7 @@ The CMake build automatically applies the following flags:
 
 The build uses the PS2DEV CMake toolchain file located at:
 ```
-$PS2DEV/share/ps2dev.cmake
+$PS2DEV/cmake/ps2dev.cmake
 ```
 
 This toolchain file is automatically detected when `PS2DEV` is set.
@@ -119,7 +119,7 @@ export PS2SDK=$PS2DEV/ps2sdk
 
 ### Toolchain file not found
 
-Make sure the toolchain file exists at `$PS2DEV/share/ps2dev.cmake`.
+Make sure the toolchain file exists at `$PS2DEV/cmake/ps2dev.cmake`.
 
 ### Build errors
 
