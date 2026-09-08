@@ -58,5 +58,5 @@ jobs:
         if: always()
         shell: pwsh
         run: |
-          Remove-Item -Force "ps2stuff-*-windows-amd64.zip" -ErrorAction SilentlyContinue
+          Remove-Item -Force "ps2stuff-*.zip" -ErrorAction SilentlyContinue
           Remove-Item -Recurse -Force build -ErrorAction SilentlyContinue
