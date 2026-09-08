@@ -8,33 +8,34 @@ on:
 
 jobs:
   release:
-    runs-on: windows
+    runs-on: docker
     steps:
       - uses: actions/checkout@v4
 
-      - name: Clean C:\ps2dev-consumer
-        shell: pwsh
-        run: Remove-Item -Recurse -Force C:\ps2dev-consumer -ErrorAction SilentlyContinue
+      - uses: https://git.techwritescode.dev/techwritescode/setup-forgejo@master
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup cmake
+        uses: https://git.techwritescode.dev/techwritescode/setup-cmake@master
 
       - uses: https://git.techwritescode.dev/ps2/setup-sdk@master
         with:
-          ps2dev: C:\ps2dev-consumer
+          ps2dev: /opt/ps2dev
+          components: toolchain,cmake,ninja,sdk-core
 
-      # ps2build update installs ps2dev.cmake itself - see build.yml's
-      # own comment on this same step.
       - name: Configure with CMake
-        shell: pwsh
+        env:
+          PS2DEV: /opt/ps2dev
         run: |
-          $env:PS2DEV = "C:\ps2dev-consumer"
-          cmake -S . -B build -G Ninja `
-            -DCMAKE_INSTALL_PREFIX=C:\ps2dev-consumer\packages\world\ps2stuff
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_MAKE_PROGRAM=/opt/ps2dev/tools/ninja \
+            -DCMAKE_INSTALL_PREFIX=/opt/ps2dev/packages/world/ps2stuff
 
       - name: Build
-        shell: pwsh
         run: cmake --build build
 
       - name: Install
-        shell: pwsh
         run: cmake --install build
 
       # Real, unmodified upstream license text, not generated -
@@ -43,29 +44,16 @@ jobs:
       # so shipping this without its license text is a genuine
       # compliance problem, not a nicety.
       - name: Bundle license
-        shell: pwsh
-        run: Copy-Item COPYING C:\ps2dev-consumer\packages\world\ps2stuff\COPYING
+        run: cp COPYING /opt/ps2dev/packages/world/ps2stuff/COPYING
 
       # Unsuffixed, matching sdk-core/sdk-world/audsrv - this is
-      # cross-compiled PS2 MIPS content, not a host binary, so a
-      # "windows"/"linux" label would be misleading regardless of
-      # which runner built it.
+      # cross-compiled PS2 MIPS content, not a host binary.
       - name: Package
-        shell: pwsh
         run: |
-          $version = "${{ github.ref_name }}"
-          Compress-Archive -Path C:\ps2dev-consumer\packages\world\ps2stuff\* -DestinationPath "ps2stuff-$version.zip"
+          version="${GITHUB_REF_NAME}"
+          cd /opt/ps2dev/packages/world/ps2stuff && zip -r "$GITHUB_WORKSPACE/ps2stuff-$version.zip" .
 
-      # Assumes fj is installed and already authenticated on the runner.
       - name: Publish release
-        shell: pwsh
         run: |
-          $version = "${{ github.ref_name }}"
-          fj release create $version -t $version -a "ps2stuff-$version.zip" -r ps2/ps2stuff
-
-      - name: Clean up
-        if: always()
-        shell: pwsh
-        run: |
-          Remove-Item -Force "ps2stuff-*.zip" -ErrorAction SilentlyContinue
-          Remove-Item -Recurse -Force build -ErrorAction SilentlyContinue
+          version="${GITHUB_REF_NAME}"
+          fj release create "$version" -t "$version" -a "ps2stuff-$version.zip" -r ps2/ps2stuff

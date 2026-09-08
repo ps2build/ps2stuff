@@ -6,59 +6,42 @@ on:
 
 jobs:
   build:
-    # Same real Windows-capable Forgejo runner sdk-core/sdk-world build on
-    # - the EE cross-compiler is a native Windows .exe (built via MSYS2).
-    runs-on: windows
+    runs-on: docker
     steps:
       - uses: actions/checkout@v4
 
-      # C:\ps2dev-consumer, not C:\ps2dev - sdk-core/sdk-world's own CI
-      # builds the SDK from source into C:\ps2dev on this same
-      # self-hosted runner; a real external CMake consumer (this repo)
-      # needs its own separate, already-built SDK install so concurrent
-      # runs of both kinds of workflow can never step on each other's
-      # in-progress C:\ps2dev.
-      - name: Clean C:\ps2dev-consumer
-        shell: pwsh
-        run: Remove-Item -Recurse -Force C:\ps2dev-consumer -ErrorAction SilentlyContinue
+      - name: Setup cmake
+        uses: https://git.techwritescode.dev/techwritescode/setup-cmake@master
 
       - uses: https://git.techwritescode.dev/ps2/setup-sdk@master
         with:
-          ps2dev: C:\ps2dev-consumer
+          ps2dev: /opt/ps2dev
+          components: toolchain,cmake,ninja,sdk-core
 
-      # ps2build update installs ps2dev.cmake itself, into
-      # C:\ps2dev-consumer\cmake\ - ps2stuff's own CMakeLists.txt
-      # already defaults CMAKE_TOOLCHAIN_FILE to
-      # $ENV{PS2DEV}/cmake/ps2dev.cmake when nothing else is passed, so
-      # setting PS2DEV is all this needs (no separate checkout, no
-      # explicit -DCMAKE_TOOLCHAIN_FILE=).
+      # CMAKE_MAKE_PROGRAM is set explicitly rather than relying on
+      # ninja being on PATH - this runs in a fresh Docker container
+      # each time, so "ps2build update ninja"'s install into
+      # $PS2DEV/tools/ninja is never actually on PATH here.
       - name: Configure with CMake
-        shell: pwsh
+        env:
+          PS2DEV: /opt/ps2dev
         run: |
-          $env:PS2DEV = "C:\ps2dev-consumer"
-          cmake -S . -B build -G Ninja `
-            -DCMAKE_INSTALL_PREFIX=C:\ps2dev-consumer\packages\world\ps2stuff
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_MAKE_PROGRAM=/opt/ps2dev/tools/ninja \
+            -DCMAKE_INSTALL_PREFIX=/opt/ps2dev/packages/world/ps2stuff
 
       - name: Build
-        shell: pwsh
         run: cmake --build build
 
       - name: Install
-        shell: pwsh
         run: cmake --install build
 
       - name: Get short SHA
         id: slug
-        shell: pwsh
-        run: "'sha8=' + $env:GITHUB_SHA.Substring(0,8) >> $env:GITHUB_OUTPUT"
+        run: echo "sha8=${GITHUB_SHA::8}" >> "$GITHUB_OUTPUT"
 
-      # The installed package directory (include/, lib/, package.yaml),
-      # not the raw build/*.a - a bare .a with no headers or
-      # package.yaml isn't something anyone could actually drop into a
-      # $PS2DEV/packages/world/ and use; cmake --install above already
-      # produced the real, complete package shape.
       - uses: actions/upload-artifact@v3
         if: success()
         with:
           name: ps2stuff-${{ steps.slug.outputs.sha8 }}
-          path: C:\ps2dev-consumer\packages\world\ps2stuff
+          path: /opt/ps2dev/packages/world/ps2stuff
