@@ -37,6 +37,15 @@ jobs:
         shell: pwsh
         run: cmake --install build
 
+      # Real, unmodified upstream license text, not generated -
+      # cmake --install only copies build outputs, never the repo's
+      # own root COPYING - LGPL-2.1 has real distribution obligations,
+      # so shipping this without its license text is a genuine
+      # compliance problem, not a nicety.
+      - name: Bundle license
+        shell: pwsh
+        run: Copy-Item COPYING C:\ps2dev-consumer\packages\world\ps2stuff\COPYING
+
       # Unsuffixed, matching sdk-core/sdk-world/audsrv - this is
       # cross-compiled PS2 MIPS content, not a host binary, so a
       # "windows"/"linux" label would be misleading regardless of
