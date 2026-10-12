@@ -35,13 +35,3 @@ jobs:
 
       - name: Install
         run: cmake --install build
-
-      - name: Get short SHA
-        id: slug
-        run: echo "sha8=${GITHUB_SHA::8}" >> "$GITHUB_OUTPUT"
-
-      - uses: actions/upload-artifact@v3
-        if: success()
-        with:
-          name: ps2stuff-${{ steps.slug.outputs.sha8 }}
-          path: /opt/ps2dev/packages/world/ps2stuff
