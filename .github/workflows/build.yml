@@ -6,23 +6,16 @@ on:
 
 jobs:
   build:
-    runs-on: docker
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup cmake
-        uses: https://git.techwritescode.dev/techwritescode/setup-cmake@master
-
-      - uses: https://git.techwritescode.dev/ps2/setup-sdk@master
+      - uses: ps2build/setup-sdk@main
         with:
           ps2dev: /opt/ps2dev
           components: toolchain,cmake,ninja,sdk-core
 
-      # CMAKE_MAKE_PROGRAM is set explicitly rather than relying on
-      # ninja being on PATH - this runs in a fresh Docker container
-      # each time, so "ps2build update ninja"'s install into
-      # $PS2DEV/tools/ninja is never actually on PATH here.
-      - name: Configure with CMake
+      - name: Configure
         env:
           PS2DEV: /opt/ps2dev
         run: |

@@ -1,0 +1,47 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ps2build/setup-sdk@main
+        with:
+          ps2dev: /opt/ps2dev
+          components: toolchain,cmake,ninja,sdk-core
+
+      - name: Configure
+        env:
+          PS2DEV: /opt/ps2dev
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_MAKE_PROGRAM=/opt/ps2dev/tools/ninja \
+            -DCMAKE_INSTALL_PREFIX=/opt/ps2dev/packages/world/ps2stuff
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Install
+        run: cmake --install build
+
+      - name: Bundle license
+        run: |
+          cp COPYING /opt/ps2dev/packages/world/ps2stuff/COPYING
+
+      - name: Package
+        run: (cd /opt/ps2dev/packages/world/ps2stuff && zip -qr "$GITHUB_WORKSPACE/ps2stuff-${GITHUB_REF_NAME}.zip" .)
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" ps2stuff-*.zip
